@@ -1,0 +1,63 @@
+---
+title: "project"
+output:
+  html_document: default
+  pdf_document: default
+date: "2023-01-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("FactoMineR")
+library("factoextra")
+```
+
+
+## Dataset Analysis
+The dataset is loaded and a pie chart is shown for the class distribution
+
+```{r}
+dataset = read.csv("./dataset/star_classification.csv")
+pie(table(dataset$class))
+print(dataset[1:10,])
+```
+The unnecessary columns are removed
+```{r}
+dataset.target = dataset$class
+
+dataset$obj_ID      <- NULL    # Object identifier
+dataset$alfa        <- NULL    # Right ascension angle
+dataset$delta       <- NULL    # Declination angle
+dataset$run_ID      <- NULL    # Run number used to identify the specific scan
+dataset$rerun_ID    <- NULL    # Rerun number that specify of the image was processed
+dataset$cam_col     <- NULL    # Camera column to identify the scanline
+dataset$field_ID    <- NULL    # Field number to identify each field
+dataset$spec_obj_ID <- NULL    # Unique ID used for optical spectroscopic objects
+dataset$plate       <- NULL    # Identifies each plate in SDSS
+dataset$MJD         <- NULL    # Modified Julian date
+dataset$fiber_ID    <- NULL    # Identifies the fiber that fired
+dataset$class       <- NULL    # Target 
+```
+
+The PCA is computed and we can see that two dimensions explain more than 80% of the variance
+
+```{r}
+dataset.pca <- PCA(dataset, scale.unit = TRUE, ncp = 7, graph = FALSE)
+
+# PCA Eigenvalues
+eig <- get_eigenvalue(dataset.pca)
+print('Eigenvalues:')
+print(eig)
+fviz_eig(dataset.pca, addlabels = TRUE, ylim = c(0, 50))
+fviz_pca_var(dataset.pca, col.var = "black")
+```
+Having achieved more than 80% explained variance with the first two dimensions we compute PCA again using only two dimensions and save the PCA variables
+```{r}
+dataset.pca = PCA(dataset, scale.unit = TRUE, ncp = 2, graph = FALSE)
+
+dataset.pca.variables <- get_pca_var(dataset.pca)
+
+```
