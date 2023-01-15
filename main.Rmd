@@ -68,14 +68,16 @@ dataset$class       <- NULL    # Target
 split.data = function(data, p = 0.7, s = 9000) {
   set.seed(s)
   index = sample(1:dim(data)[1])
-  train = data[index[1:floor(dim(data)[1] * p)], ]
-  test = data[index[((ceiling(dim(data)[1] * p)) + 1):dim(data)[1]], ]
+  train = index[1:floor(dim(data)[1] * p)]
+  test = index[((ceiling(dim(data)[1] * p)) + 1):dim(data)[1]]
   return(list(train=train, test=test)) 
 }
 
 split = split.data(dataset)
-dataset.train = split$train
-dataset.test = split$test
+dataset.train = dataset[split$train, ]
+dataset.test = dataset[split$test, ]
+dataset.target.train = dataset.target[split$train]
+dataset.target.test = dataset.target[split$test]
 
 dim(dataset.train)
 dim(dataset.test)
@@ -106,7 +108,16 @@ dim(dataset.train.pca.ind$coord)
 ## SVM
 
 ```{r}
+dataset.train = data.frame(dataset.train.pca.ind$coord)
+dataset.train$target <- factor(dataset.target.train)
 
+plot(x=dataset.train[,1], y=dataset.train[,2], col = dataset.train$target)
+plot(x=dataset.train[,1], y=dataset.train[,3], col = dataset.train$target)
+plot(x=dataset.train[,2], y=dataset.train[,3], col = dataset.train$target)
+
+
+#linear.svm = svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel='radial', probability=TRUE)
+#tuned.svm = tune.svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel=c('radial'), cost=c(0.1, 1,5,10), probability=TRUE)
 ```
 
 ## Tree
