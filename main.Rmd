@@ -10,16 +10,18 @@ date: "2023-01-08"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 # install.packages("FactoMineR")
 # install.packages("factoextra")
 # install.packages("e1071")
+# install.packages("corrplot")
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 library("FactoMineR")
 library("factoextra")
 library("e1071")
+library("corrplot")
 ```
 
 ## Dataset Analysis
@@ -43,21 +45,58 @@ Now, we plot the different target class distribution for the dataset
 pie(table(dataset$class))
 ```
 
+### Dataset split
+
+```{r}
+
+split.data = function(data, p = 0.7, s = 9000) {
+  set.seed(s)
+  index = sample(1:dim(data)[1])
+  train = index[1:floor(dim(data)[1] * p)]
+  test = index[((ceiling(dim(data)[1] * p)) + 1):dim(data)[1]]
+  return(list(train=train, test=test)) 
+}
+
+split = split.data(dataset)
+dataset.train = dataset[split$train, ]
+dataset.test = dataset[split$test, ]
+dataset.target.train = dataset.target[split$train]
+dataset.target.test = dataset.target[split$test]
+
+dim(dataset.train)
+dim(dataset.test)
+```
+
+### Feature selection
+
+```{r}
+# Convert the dataclass target column to numeric
+dataset.train.target = as.numeric(factor(dataset.target.train))
+
+dataset.train$class <- NULL
+
+# Compute the correlation matrix
+correlation_matrix = cor(dataset.train, dataset.train.target, use = "pairwise.complete.obs")
+
+corrplot(cor_matrix)
+
+```
+
 The unnecessary columns are removed
 
 ```{r}
 dataset.target = dataset$class
 
 dataset$obj_ID      <- NULL    # Object identifier
-dataset$alfa        <- NULL    # Right ascension angle
+dataset$alpha       <- NULL    # Right ascension angle
 dataset$delta       <- NULL    # Declination angle
 dataset$run_ID      <- NULL    # Run number used to identify the specific scan
 dataset$rerun_ID    <- NULL    # Rerun number that specify of the image was processed
 dataset$cam_col     <- NULL    # Camera column to identify the scanline
 dataset$field_ID    <- NULL    # Field number to identify each field
-dataset$spec_obj_ID <- NULL    # Unique ID used for optical spectroscopic objects
-dataset$plate       <- NULL    # Identifies each plate in SDSS
-dataset$MJD         <- NULL    # Modified Julian date
+# dataset$spec_obj_ID <- NULL    # Unique ID used for optical spectroscopic objects
+# dataset$plate       <- NULL    # Identifies each plate in SDSS
+# dataset$MJD         <- NULL    # Modified Julian date
 dataset$fiber_ID    <- NULL    # Identifies the fiber that fired
 dataset$class       <- NULL    # Target 
 ```
@@ -111,13 +150,26 @@ dim(dataset.train.pca.ind$coord)
 dataset.train = data.frame(dataset.train.pca.ind$coord)
 dataset.train$target <- factor(dataset.target.train)
 
-plot(x=dataset.train[,1], y=dataset.train[,2], col = dataset.train$target)
-plot(x=dataset.train[,1], y=dataset.train[,3], col = dataset.train$target)
-plot(x=dataset.train[,2], y=dataset.train[,3], col = dataset.train$target)
+# linear.svm = svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel='radial', probability=TRUE)
+# radial.tuned.svm = tune.svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel=c('radial'), cost=c(0.1, 1,5,10), probability=TRUE)
+```
 
+### Generate predictions
 
-#linear.svm = svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel='radial', probability=TRUE)
-#tuned.svm = tune.svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel=c('radial'), cost=c(0.1, 1,5,10), probability=TRUE)
+```{r}
+
+# Apply the PCA transform over the test dataset
+dataset.test.pca <- predict(dataset.train.pca, newdata=dataset.test)
+
+dataset.test.pca$coord[1:5, ]
+dim(dataset.test.pca$coord)
+
+# Generate predictions
+svm.pred = predict(svm.radial, dataset.test.pca$coord)
+
+# Create confusion matrix
+svm.table = table(svm.pred, dataset.target.test)
+svm.table
 ```
 
 ## Tree
