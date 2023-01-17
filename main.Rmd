@@ -15,6 +15,8 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("factoextra")
 # install.packages("e1071")
 # install.packages("corrplot")
+# install.packages('caret')
+# install.packages("DMwR2")
 ```
 
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -22,6 +24,8 @@ library("FactoMineR")
 library("factoextra")
 library("e1071")
 library("corrplot")
+library("caret")
+library("DMwR2")
 ```
 
 ## Dataset Analysis
@@ -57,11 +61,13 @@ split.data = function(data, p = 0.7, s = 9000) {
   return(list(train=train, test=test)) 
 }
 
+dataset.target = dataset$class
+
 split = split.data(dataset)
 dataset.train = dataset[split$train, ]
 dataset.test = dataset[split$test, ]
-dataset.target.train = dataset.target[split$train]
-dataset.target.test = dataset.target[split$test]
+dataset.train.target = dataset.target[split$train]
+dataset.test.target = dataset.target[split$test]
 
 dim(dataset.train)
 dim(dataset.test)
@@ -71,58 +77,51 @@ dim(dataset.test)
 
 ```{r}
 # Convert the dataclass target column to numeric
-dataset.train.target = as.numeric(factor(dataset.target.train))
+dataset.train.target.numeric = as.numeric(factor(dataset.train.target))
 
 dataset.train$class <- NULL
+dataset.train$rerun_ID <- NULL
 
 # Compute the correlation matrix
-correlation_matrix = cor(dataset.train, dataset.train.target, use = "pairwise.complete.obs")
+correlation_matrix = cor(dataset.train, dataset.train.target.numeric, use = "pairwise.complete.obs")
 
-corrplot(cor_matrix)
-
+print(correlation_matrix)
 ```
 
-The unnecessary columns are removed
+Having computed the correlation between the dataset various column and its target, the unnecessary columns are removed
 
 ```{r}
-dataset.target = dataset$class
 
-dataset$obj_ID      <- NULL    # Object identifier
-dataset$alpha       <- NULL    # Right ascension angle
-dataset$delta       <- NULL    # Declination angle
-dataset$run_ID      <- NULL    # Run number used to identify the specific scan
-dataset$rerun_ID    <- NULL    # Rerun number that specify of the image was processed
-dataset$cam_col     <- NULL    # Camera column to identify the scanline
-dataset$field_ID    <- NULL    # Field number to identify each field
-# dataset$spec_obj_ID <- NULL    # Unique ID used for optical spectroscopic objects
-# dataset$plate       <- NULL    # Identifies each plate in SDSS
-# dataset$MJD         <- NULL    # Modified Julian date
-dataset$fiber_ID    <- NULL    # Identifies the fiber that fired
-dataset$class       <- NULL    # Target 
+dataset.train$obj_ID      <- NULL    # Object identifier
+dataset.train$alpha       <- NULL    # Right ascension angle
+# dataset.train$delta       <- NULL    # Declination angle
+dataset.train$run_ID      <- NULL    # Run number used to identify the specific scan
+dataset.train$rerun_ID    <- NULL    # Rerun number that specify of the image was processed
+dataset.train$cam_col     <- NULL    # Camera column to identify the scanline
+dataset.train$field_ID    <- NULL    # Field number to identify each field
+# dataset.train$spec_obj_ID <- NULL    # Unique ID used for optical spectroscopic objects
+# dataset.train$plate       <- NULL    # Identifies each plate in SDSS
+# dataset.train$MJD         <- NULL    # Modified Julian date
+dataset.train$fiber_ID    <- NULL    # Identifies the fiber that fired
+dataset.train$class       <- NULL    # Target
+
+
+# The same number of column is dropped from the test set in order to later apply the PCA transform computed on the train set
+dataset.test$obj_ID      <- NULL    # Object identifier
+dataset.test$alpha       <- NULL    # Right ascension angle
+# dataset.test$delta       <- NULL    # Declination angle
+dataset.test$run_ID      <- NULL    # Run number used to identify the specific scan
+dataset.test$rerun_ID    <- NULL    # Rerun number that specify of the image was processed
+dataset.test$cam_col     <- NULL    # Camera column to identify the scanline
+dataset.test$field_ID    <- NULL    # Field number to identify each field
+# dataset.test$spec_obj_ID <- NULL    # Unique ID used for optical spectroscopic objects
+# dataset.test$plate       <- NULL    # Identifies each plate in SDSS
+# dataset.test$MJD         <- NULL    # Modified Julian date
+dataset.test$fiber_ID    <- NULL    # Identifies the fiber that fired
+dataset.test$class       <- NULL    # Target
 ```
 
-## Training and Test Datasets
-
-```{r}
-split.data = function(data, p = 0.7, s = 9000) {
-  set.seed(s)
-  index = sample(1:dim(data)[1])
-  train = index[1:floor(dim(data)[1] * p)]
-  test = index[((ceiling(dim(data)[1] * p)) + 1):dim(data)[1]]
-  return(list(train=train, test=test)) 
-}
-
-split = split.data(dataset)
-dataset.train = dataset[split$train, ]
-dataset.test = dataset[split$test, ]
-dataset.target.train = dataset.target[split$train]
-dataset.target.test = dataset.target[split$test]
-
-dim(dataset.train)
-dim(dataset.test)
-```
-
-The PCA is computed and we can see that two dimensions explain more than 80% of the variance.
+The PCA is computed and we can see that three dimensions explain more than 80% of the variance.
 
 ```{r}
 dataset.train.pca <- PCA(dataset.train, scale.unit = TRUE, ncp = 7, graph = FALSE)
@@ -148,9 +147,17 @@ dim(dataset.train.pca.ind$coord)
 
 ```{r}
 dataset.train = data.frame(dataset.train.pca.ind$coord)
-dataset.train$target <- factor(dataset.target.train)
+dataset.train$target <- factor(dataset.train.target)
 
-# linear.svm = svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel='radial', probability=TRUE)
+svm.radial = svm(
+  target ~ Dim.1 + Dim.2 + Dim.3,
+  data        = dataset.train,
+  kernel      = 'radial',
+  probability = FALSE,
+  cost        = 1
+)
+
+
 # radial.tuned.svm = tune.svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel=c('radial'), cost=c(0.1, 1,5,10), probability=TRUE)
 ```
 
@@ -159,16 +166,18 @@ dataset.train$target <- factor(dataset.target.train)
 ```{r}
 
 # Apply the PCA transform over the test dataset
-dataset.test.pca <- predict(dataset.train.pca, newdata=dataset.test)
+dataset.test.pca = predict(dataset.train.pca, newdata=dataset.test)
+dataset.test.pca = data.frame(dataset.test.pca$coord)
 
-dataset.test.pca$coord[1:5, ]
-dim(dataset.test.pca$coord)
+dataset.test.pca$target = dataset.test.target
+dataset.test.pca$target = factor(dataset.test.pca$target)
+
 
 # Generate predictions
-svm.pred = predict(svm.radial, dataset.test.pca$coord)
+svm.pred = predict(svm.radial, dataset.test.pca)
 
 # Create confusion matrix
-svm.table = table(svm.pred, dataset.target.test)
+svm.table = table(svm.pred, dataset.test.target)
 svm.table
 ```
 
