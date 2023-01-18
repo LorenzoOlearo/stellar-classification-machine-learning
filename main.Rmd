@@ -7,7 +7,9 @@ date: "2023-01-08"
 ---
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(echo = TRUE)
+
 ```
 
 ```{r message=FALSE, warning=FALSE}
@@ -16,14 +18,17 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("e1071")
 # install.packages("corrplot")
 # install.packages('caret')
+
 ```
 
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+
 library("FactoMineR")
 library("factoextra")
 library("e1071")
 library("corrplot")
 library("caret")
+
 ```
 
 ## Dataset Analysis
@@ -31,20 +36,26 @@ library("caret")
 The dataset is composed of 18 columns describing each of the 100000
 
 ```{r}
+
 dataset = read.csv("./dataset/star_classification.csv")
 dim(dataset)
+
 ```
 
 Let's look at the first 5 sample elements of the dataset
 
 ```{r}
+
 dataset[1:5,]
+
 ```
 
 Now, we plot the different target class distribution for the dataset
 
 ```{r}
+
 pie(table(dataset$class))
+
 ```
 
 ### Dataset split
@@ -69,11 +80,13 @@ dataset.test.target = dataset.target[split$test]
 
 dim(dataset.train)
 dim(dataset.test)
+
 ```
 
 ### Feature selection
 
 ```{r}
+
 # Convert the dataclass target column to numeric
 dataset.train.target.numeric = as.numeric(factor(dataset.train.target))
 
@@ -87,6 +100,7 @@ print(correlation_on_target)
 
 correlation_matrix = cor(dataset.train)
 corrplot(correlation_matrix, method = 'color')
+
 ```
 
 Having computed the correlation between the dataset various column and its target, the unnecessary columns are removed
@@ -120,6 +134,7 @@ dataset.test$plate       <- NULL    # Identifies each plate in SDSS
 dataset.test$MJD         <- NULL    # Modified Julian date
 dataset.test$fiber_ID    <- NULL    # Identifies the fiber that fired
 dataset.test$class       <- NULL    # Target
+
 ```
 
 ### Data normalization
@@ -192,66 +207,78 @@ dataset.train$delta = subdataset.train[, 2]
 # redshift scaling
 dataset.test$redshift = scale_test(dataset.test$redshift, max(dataset.train$redshift), min(dataset.train$redshift))
 dataset.train$redshift = scale_train(dataset.train$redshift)
+
 ```
 
 
 The PCA is computed and we can see that four dimensions explain more than 90% of the variance.
 
 ```{r}
-dataset.train.pca <- PCA(dataset.train, scale.unit = FALSE, ncp = 8, graph = FALSE)
+
+pca.train <- PCA(dataset.train, scale.unit = FALSE, ncp = 8, graph = FALSE)
 
 # PCA Eigenvalues
-eig <- get_eigenvalue(dataset.train.pca)
+eig <- get_eigenvalue(pca.train)
 print('Eigenvalues:')
 print(eig)
-fviz_eig(dataset.train.pca, addlabels = TRUE, ylim = c(0, 50))
-fviz_pca_var(dataset.train.pca, col.var = "black")
+fviz_eig(pca.train, addlabels = TRUE, ylim = c(0, 50))
+fviz_pca_var(pca.train, col.var = "black")
+
+# Compute the correlation matrix on the PCA transformed train dataset
+pca.train.cor = data.frame(get_pca_ind(pca.train)$coord)
+pca.train.cor$class = dataset.train.target.numeric
+pca.train.cor = cor(pca.train.cor)
+corrplot(pca.train.cor, method = 'color')
+
 ```
 
 Having achieved more than 80% explained variance with the first four dimensions we compute PCA again using only three dimensions and save the PCA variables
 
 ```{r}
-dataset.train.pca = PCA(dataset.train, scale.unit = FALSE, ncp = 4, graph = FALSE)
-dataset.train.pca.variables <- get_pca_var(dataset.train.pca)
-dataset.train.pca.ind <- get_pca_ind(dataset.train.pca)
-dim(dataset.train.pca.ind$coord)
+
+pca.train = PCA(dataset.train, scale.unit = FALSE, ncp = 4, graph = FALSE)
+pca.train.variables <- get_pca_var(pca.train)
+pca.train.ind <- get_pca_ind(pca.train)
+dim(pca.train.ind$coord)
+
+dataset.train.pca = data.frame(pca.train.ind$coord)
+dataset.train.pca$target <- factor(dataset.train.target)
+
+# Apply the PCA transform over the test dataset
+pca.test = predict(pca.train, newdata=dataset.test)
+dataset.test.pca = data.frame(pca.test$coord)
+
+dataset.test.pca$target = dataset.test.target
+dataset.test.pca$target = factor(dataset.test.pca$target)
+
 ```
 
 ## SVM
 
 ```{r}
-dataset.train = data.frame(dataset.train.pca.ind$coord)
-dataset.train$target <- factor(dataset.train.target)
 
 svm.radial = svm(
- target ~ Dim.1 + Dim.2 + Dim.3 + Dim.4,
- data        = dataset.train,
+ target ~ .,
+ data        = dataset.train.pca,
  kernel      = 'radial',
  probability = FALSE,
  cost        = 1
 )
 
+svm.radial.tuned = tune.svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel=c('radial'), cost=c(0.1, 1,5,10), probability=TRUE)
 
-# svm.radial.tuned = tune.svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel=c('radial'), cost=c(0.1, 1,5,10), probability=TRUE)
 ```
 
 ### Generate predictions
 
 ```{r}
 
-# Apply the PCA transform over the test dataset
-dataset.test.pca = predict(dataset.train.pca, newdata=dataset.test)
-dataset.test.pca = data.frame(dataset.test.pca$coord)
-
-dataset.test.pca$target = dataset.test.target
-dataset.test.pca$target = factor(dataset.test.pca$target)
-
-
 # Generate predictions
 svm.pred = predict(svm.radial, dataset.test.pca)
 
 # Create confusion matrix
 confusionMatrix(data = svm.pred, reference = factor(dataset.test.target))
+
 ```
 
 ## Tree
@@ -261,12 +288,3 @@ confusionMatrix(data = svm.pred, reference = factor(dataset.test.target))
 ## Metrics
 
 ## Results
-
-## Prediction on the test set
-
-```{r}
-dataset.test.pca <- predict(dataset.train.pca, newdata=dataset.test)
-
-dataset.test.pca$coord[1:5, ]
-dim(dataset.test.pca$coord)
-```
