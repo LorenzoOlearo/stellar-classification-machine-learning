@@ -7,19 +7,28 @@ date: "2023-01-08"
 ---
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(echo = TRUE)
+
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 # install.packages("FactoMineR")
 # install.packages("factoextra")
 # install.packages("e1071")
+# install.packages("corrplot")
+# install.packages('caret')
+
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+
 library("FactoMineR")
 library("factoextra")
 library("e1071")
+library("corrplot")
+library("caret")
+
 ```
 
 ## Dataset Analysis
@@ -27,87 +36,223 @@ library("e1071")
 The dataset is composed of 18 columns describing each of the 100000
 
 ```{r}
+
 dataset = read.csv("./dataset/star_classification.csv")
 dim(dataset)
+
 ```
 
 Let's look at the first 5 sample elements of the dataset
 
 ```{r}
+
 dataset[1:5,]
+
 ```
 
 Now, we plot the different target class distribution for the dataset
 
 ```{r}
+
 pie(table(dataset$class))
+
 ```
 
-The unnecessary columns are removed
+### Dataset split
 
 ```{r}
-dataset.target = dataset$class
 
-dataset$obj_ID      <- NULL    # Object identifier
-dataset$alfa        <- NULL    # Right ascension angle
-dataset$delta       <- NULL    # Declination angle
-dataset$run_ID      <- NULL    # Run number used to identify the specific scan
-dataset$rerun_ID    <- NULL    # Rerun number that specify of the image was processed
-dataset$cam_col     <- NULL    # Camera column to identify the scanline
-dataset$field_ID    <- NULL    # Field number to identify each field
-dataset$spec_obj_ID <- NULL    # Unique ID used for optical spectroscopic objects
-dataset$plate       <- NULL    # Identifies each plate in SDSS
-dataset$MJD         <- NULL    # Modified Julian date
-dataset$fiber_ID    <- NULL    # Identifies the fiber that fired
-dataset$class       <- NULL    # Target 
-```
-
-## Training and Test Datasets
-
-```{r}
 split.data = function(data, p = 0.7, s = 9000) {
   set.seed(s)
   index = sample(1:dim(data)[1])
-  train = data[index[1:floor(dim(data)[1] * p)], ]
-  test = data[index[((ceiling(dim(data)[1] * p)) + 1):dim(data)[1]], ]
+  train = index[1:floor(dim(data)[1] * p)]
+  test = index[((ceiling(dim(data)[1] * p)) + 1):dim(data)[1]]
   return(list(train=train, test=test)) 
 }
 
+dataset.target = dataset$class
+
 split = split.data(dataset)
-dataset.train = split$train
-dataset.test = split$test
+dataset.train = dataset[split$train, ]
+dataset.test = dataset[split$test, ]
+dataset.train.target = dataset.target[split$train]
+dataset.test.target = dataset.target[split$test]
 
 dim(dataset.train)
 dim(dataset.test)
+
 ```
 
-The PCA is computed and we can see that two dimensions explain more than 80% of the variance.
+### Feature selection
 
 ```{r}
-dataset.train.pca <- PCA(dataset.train, scale.unit = TRUE, ncp = 7, graph = FALSE)
+
+# Convert the dataclass target column to numeric
+dataset.train.target.numeric = as.numeric(factor(dataset.train.target))
+
+dataset.train$rerun_ID <- NULL
+
+dataset.train$class = as.numeric(factor(dataset.train$class))
+
+# Compute the correlation matrix
+correlation_on_target = cor(dataset.train, dataset.train.target.numeric, use = "pairwise.complete.obs")
+print(correlation_on_target)
+
+correlation_matrix = cor(dataset.train)
+corrplot(correlation_matrix, method = 'color')
+
+```
+
+Having computed the correlation between the dataset various column and its target, the unnecessary columns are removed
+
+```{r}
+
+dataset.train$obj_ID      <- NULL    # Object identifier
+# dataset.train$alpha       <- NULL    # Right ascension angle
+# dataset.train$delta       <- NULL    # Declination angle
+dataset.train$run_ID      <- NULL    # Run number used to identify the specific scan
+dataset.train$rerun_ID    <- NULL    # Rerun number that specify of the image was processed
+dataset.train$cam_col     <- NULL    # Camera column to identify the scanline
+dataset.train$field_ID    <- NULL    # Field number to identify each field
+dataset.train$spec_obj_ID <- NULL    # Unique ID used for optical spectroscopic objects
+dataset.train$plate       <- NULL    # Identifies each plate in SDSS
+dataset.train$MJD         <- NULL    # Modified Julian date
+dataset.train$fiber_ID    <- NULL    # Identifies the fiber that fired
+dataset.train$class       <- NULL    # Target
+
+
+# The same number of column is dropped from the test set in order to later apply the PCA transform computed on the train set
+dataset.test$obj_ID      <- NULL    # Object identifier
+# dataset.test$alpha       <- NULL    # Right ascension angle
+# dataset.test$delta       <- NULL    # Declination angle
+dataset.test$run_ID      <- NULL    # Run number used to identify the specific scan
+dataset.test$rerun_ID    <- NULL    # Rerun number that specify of the image was processed
+dataset.test$cam_col     <- NULL    # Camera column to identify the scanline
+dataset.test$field_ID    <- NULL    # Field number to identify each field
+dataset.test$spec_obj_ID <- NULL    # Unique ID used for optical spectroscopic objects
+dataset.test$plate       <- NULL    # Identifies each plate in SDSS
+dataset.test$MJD         <- NULL    # Modified Julian date
+dataset.test$fiber_ID    <- NULL    # Identifies the fiber that fired
+dataset.test$class       <- NULL    # Target
+
+```
+
+### Data normalization
+```{r}
+
+scale_train = function(dataframe) {
+  return ((dataframe - min(dataframe)) / (max(dataframe) - min(dataframe)))
+}
+
+scale_test = function(dataframe, maxi, mini) {
+  return ((dataframe - mini) / (maxi - mini))
+}
+
+
+# The spectral components are normalized with respect of each other
+subdataset.test = data.frame(
+  u = dataset.test$u,
+  r = dataset.test$r,
+  i = dataset.test$i,
+  g = dataset.test$g,
+  z = dataset.test$z
+)
+
+subdataset.train = data.frame(
+  u = dataset.train$u,
+  r = dataset.train$r,
+  i = dataset.train$i,
+  g = dataset.train$g,
+  z = dataset.train$z
+)
+
+
+subdataset.test = scale_test(subdataset.test, max(subdataset.train), min(subdataset.train))
+subdataset.train = scale_train(subdataset.train)
+
+dataset.test$u = subdataset.test[, 1]
+dataset.test$r = subdataset.test[, 2]
+dataset.test$i = subdataset.test[, 3]
+dataset.test$g = subdataset.test[, 4]
+dataset.test$z = subdataset.test[, 5]
+
+dataset.train$u = subdataset.train[, 1]
+dataset.train$r = subdataset.train[, 2]
+dataset.train$i = subdataset.train[, 3]
+dataset.train$g = subdataset.train[, 4]
+dataset.train$z = subdataset.train[, 5]
+
+
+# The position components are normalized with respect of each other
+subdataset.test = data.frame(
+  alpha = dataset.test$alpha,
+  delta = dataset.test$delta
+)
+
+subdataset.train = data.frame(
+  alpha = dataset.train$alpha,
+  delta = dataset.train$delta
+)
+
+subdataset.test = scale_test(subdataset.test, max(subdataset.train), min(subdataset.train))
+subdataset.train = scale_train(subdataset.train)
+
+dataset.test$alpha = subdataset.test[, 1]
+dataset.test$delta = subdataset.test[, 2]
+
+dataset.train$alpha = subdataset.train[, 1]
+dataset.train$delta = subdataset.train[, 2]
+
+
+# redshift scaling
+dataset.test$redshift = scale_test(dataset.test$redshift, max(dataset.train$redshift), min(dataset.train$redshift))
+dataset.train$redshift = scale_train(dataset.train$redshift)
+
+```
+
+
+The PCA is computed and we can see that four dimensions explain more than 90% of the variance.
+
+```{r}
+
+pca.train <- PCA(dataset.train, scale.unit = FALSE, ncp = 8, graph = FALSE)
 
 # PCA Eigenvalues
-eig <- get_eigenvalue(dataset.train.pca)
+eig <- get_eigenvalue(pca.train)
 print('Eigenvalues:')
 print(eig)
-fviz_eig(dataset.train.pca, addlabels = TRUE, ylim = c(0, 50))
-fviz_pca_var(dataset.train.pca, col.var = "black")
+fviz_eig(pca.train, addlabels = TRUE, ylim = c(0, 50))
+fviz_pca_var(pca.train, col.var = "black")
+
+# Compute the correlation matrix on the PCA transformed train dataset
+pca.train.cor = data.frame(get_pca_ind(pca.train)$coord)
+pca.train.cor$class = dataset.train.target.numeric
+pca.train.cor = cor(pca.train.cor)
+corrplot(pca.train.cor, method = 'color')
+
 ```
 
-Having achieved more than 80% explained variance with the first three dimensions we compute PCA again using only three dimensions and save the PCA variables
-
-```{r}
-dataset.train.pca = PCA(dataset.train, scale.unit = TRUE, ncp = 3, graph = FALSE)
-dataset.train.pca.variables <- get_pca_var(dataset.train.pca)
-dataset.train.pca.ind <- get_pca_ind(dataset.train.pca)
-dim(dataset.train.pca.ind$coord)
-```
-
-## SVM
+Having achieved more than 80% explained variance with the first four dimensions we compute PCA again using only three dimensions and save the PCA variables
 
 ```{r}
 
+pca.train = PCA(dataset.train, scale.unit = FALSE, ncp = 4, graph = FALSE)
+pca.train.variables <- get_pca_var(pca.train)
+pca.train.ind <- get_pca_ind(pca.train)
+dim(pca.train.ind$coord)
+
+dataset.train.pca = data.frame(pca.train.ind$coord)
+dataset.train.pca$target <- factor(dataset.train.target)
+
+# Apply the PCA transform over the test dataset
+pca.test = predict(pca.train, newdata=dataset.test)
+dataset.test.pca = data.frame(pca.test$coord)
+
+dataset.test.pca$target = dataset.test.target
+dataset.test.pca$target = factor(dataset.test.pca$target)
+
 ```
+
 
 ## Tree
 
@@ -116,12 +261,3 @@ dim(dataset.train.pca.ind$coord)
 ## Metrics
 
 ## Results
-
-## Prediction on the test set
-
-```{r}
-dataset.test.pca <- predict(dataset.train.pca, newdata=dataset.test)
-
-dataset.test.pca$coord[1:5, ]
-dim(dataset.test.pca$coord)
-```
