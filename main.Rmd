@@ -16,7 +16,6 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("e1071")
 # install.packages("corrplot")
 # install.packages('caret')
-# install.packages("DMwR2")
 ```
 
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -25,7 +24,6 @@ library("factoextra")
 library("e1071")
 library("corrplot")
 library("caret")
-library("DMwR2")
 ```
 
 ## Dataset Analysis
@@ -79,13 +77,16 @@ dim(dataset.test)
 # Convert the dataclass target column to numeric
 dataset.train.target.numeric = as.numeric(factor(dataset.train.target))
 
-dataset.train$class <- NULL
 dataset.train$rerun_ID <- NULL
 
-# Compute the correlation matrix
-correlation_matrix = cor(dataset.train, dataset.train.target.numeric, use = "pairwise.complete.obs")
+dataset.train$class = as.numeric(factor(dataset.train.class))
 
-print(correlation_matrix)
+# Compute the correlation matrix
+correlation_on_target = cor(dataset.train, dataset.train.target.numeric, use = "pairwise.complete.obs")
+print(correlation_on_target)
+
+correlation_matrix = cor(dataset.train)
+corrplot(correlation_matrix)
 ```
 
 Having computed the correlation between the dataset various column and its target, the unnecessary columns are removed
@@ -149,13 +150,13 @@ dim(dataset.train.pca.ind$coord)
 dataset.train = data.frame(dataset.train.pca.ind$coord)
 dataset.train$target <- factor(dataset.train.target)
 
-svm.radial = svm(
-  target ~ Dim.1 + Dim.2 + Dim.3,
-  data        = dataset.train,
-  kernel      = 'radial',
-  probability = FALSE,
-  cost        = 1
-)
+#svm.radial = svm(
+#  target ~ Dim.1 + Dim.2 + Dim.3,
+#  data        = dataset.train,
+#  kernel      = 'radial',
+#  probability = FALSE,
+#  cost        = 1
+#)
 
 
 # radial.tuned.svm = tune.svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel=c('radial'), cost=c(0.1, 1,5,10), probability=TRUE)
@@ -177,8 +178,7 @@ dataset.test.pca$target = factor(dataset.test.pca$target)
 svm.pred = predict(svm.radial, dataset.test.pca)
 
 # Create confusion matrix
-svm.table = table(svm.pred, dataset.test.target)
-svm.table
+confusionMatrix(data = svm.pred, reference = factor(dataset.test.target))
 ```
 
 ## Tree
