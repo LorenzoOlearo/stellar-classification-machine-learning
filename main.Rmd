@@ -18,6 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("e1071")
 # install.packages("corrplot")
 # install.packages('caret')
+# install.packages("randomForest")
 
 ```
 
@@ -28,6 +29,7 @@ library("factoextra")
 library("e1071")
 library("corrplot")
 library("caret")
+library("randomForest")
 
 ```
 
@@ -256,7 +258,27 @@ dataset.test.pca$target = factor(dataset.test.pca$target)
 
 ## Tree
 
-## Neural Network
+## Random Forest
+
+```{r}
+
+forest.tune = tune.randomForest(target ~ ., data = dataset.train.pca, ntree = c(1:10)*100)
+forest = forest.tune$best.model
+
+plot(forest.tune)
+
+```
+
+### Generate predictions
+
+```{r}
+
+# Generate predictions
+forest.pred = predict(forest, dataset.test.pca)
+# Create confusion matrix
+confusionMatrix(data = forest.pred, reference = factor(dataset.test.target))
+
+```
 
 ## Metrics
 
