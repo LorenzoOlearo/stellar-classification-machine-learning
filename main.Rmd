@@ -262,7 +262,9 @@ dataset.test.pca$target = factor(dataset.test.pca$target)
 
 ```{r}
 
-forest.tune = tune.randomForest(target ~ ., data = dataset.train.pca, ntree = c(1:10)*100)
+set.seed(108)
+
+forest.tune = tune.randomForest(target ~ ., data = dataset.train.pca, ntree = c(1:15)*10)
 forest = forest.tune$best.model
 
 plot(forest.tune)
