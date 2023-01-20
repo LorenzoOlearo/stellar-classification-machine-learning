@@ -18,6 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("e1071")
 # install.packages("corrplot")
 # install.packages('caret')
+# install.packages("rpart")
 
 ```
 
@@ -27,6 +28,8 @@ library("FactoMineR")
 library("factoextra")
 library("e1071")
 library("corrplot")
+library("rpart")
+library("rpart.plot")
 library("caret")
 
 ```
@@ -243,13 +246,14 @@ dim(pca.train.ind$coord)
 
 dataset.train.pca = data.frame(pca.train.ind$coord)
 dataset.train.pca$target <- factor(dataset.train.target)
+dataset.train$target <- factor(dataset.train.target)
 
 # Apply the PCA transform over the test dataset
 pca.test = predict(pca.train, newdata=dataset.test)
-dataset.test.pca = data.frame(pca.test$coord)
 
-dataset.test.pca$target = dataset.test.target
-dataset.test.pca$target = factor(dataset.test.pca$target)
+dataset.test.pca = data.frame(pca.test$coord)
+dataset.test.pca$target <- factor(dataset.test.target)
+dataset.test$target <- factor(dataset.test.target)
 
 ```
 
@@ -282,6 +286,41 @@ confusionMatrix(data = svm.pred, reference = factor(dataset.test.target))
 ```
 
 ## Tree
+
+A grid search is performed to identify the optimal complexity parameter value
+
+```{r}
+
+# Grid search over complexity parameter values for the best fitting tree
+tree.train.control = trainControl(method = "cv", number = 10)
+tree.train.grid = expand.grid(cp = (1:100)*0.001)
+tree.train = train(
+  target ~ .,
+  method    = "rpart",
+  data      = dataset.train.pca,
+  trControl = tree.train.control,
+  tuneGrid  = tree.train.grid,
+  metric    = "Kappa"
+) 
+
+tree = tree.train$finalModel
+
+plot(tree.train)
+prp(tree, type=0, extra = 1)
+
+```
+
+### Generate predictions
+
+```{r}
+
+# Generate predictions
+tree.pred = predict(tree, dataset.test.pca, type="class")
+
+# Create confusion matrix
+confusionMatrix(data = tree.pred, reference = factor(dataset.test.target))
+
+```
 
 ## Neural Network
 
