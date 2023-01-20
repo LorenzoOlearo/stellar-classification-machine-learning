@@ -14,27 +14,15 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Machine Learning Project - Academic year 2022/2023
 Group members: Lorenzo Olearo, Alessandro Riva
 
-```{r message=FALSE, warning=FALSE}
-
-# install.packages("FactoMineR")
-# install.packages("factoextra")
-# install.packages("e1071")
-# install.packages("corrplot")
-# install.packages('caret')
-# install.packages("rpart")
-# install.packages("rpart.plot")
-
-```
-
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 
-library("FactoMineR")
-library("factoextra")
-library("e1071")
-library("corrplot")
-library("rpart")
-library("rpart.plot")
-library("caret")
+if (!require("FactoMineR")) install.packages("FactoMineR"); library("FactoMineR")
+if (!require("factoextra")) install.packages("factoextra"); library("factoextra")
+if (!require("e1071")) install.packages("e1071"); library("e1071")
+if (!require("corrplot")) install.packages("corrplot"); library("corrplot")
+if (!require("rpart")) install.packages("rpart"); library("rpart")
+if (!require("rpart.plot")) install.packages("rpart.plot"); library("rpart.plot")
+if (!require("caret")) install.packages("caret"); library("caret")
 
 ```
 
