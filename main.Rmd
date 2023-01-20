@@ -1,9 +1,8 @@
 ---
-title: "machine-learning-stars-prediction"
+title: "Stellar Classification"
 output:
   html_document: default
   pdf_document: default
-date: "2023-01-08"
 ---
 
 ```{r setup, include=FALSE}
@@ -12,7 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
+## Machine Learning Project - Academic year 2022/2023
+Group members: Lorenzo Olearo, Alessandro Riva
+
 ```{r message=FALSE, warning=FALSE}
+
 # install.packages("FactoMineR")
 # install.packages("factoextra")
 # install.packages("e1071")
@@ -36,8 +39,14 @@ library("caret")
 ```
 
 ## Dataset Analysis
+In astronomy, stellar classification is the classification of stars based on their spectral characteristics.
+The classification scheme of galaxies, quasars, and stars is one of the most fundamental in astronomy.
+The early cataloguing of stars and their distribution in the sky has led to the understanding that they make up our own galaxy and, following the distinction that Andromeda was a separate galaxy to our own, numerous galaxies began to be surveyed as more powerful telescopes were built.
+This dataset aims at the classification of stars, galaxies, and quasars based on their spectral characteristics.
 
-The dataset is composed of 18 columns describing each of the 100000
+The data consists of 100,000 observations of space taken by the SDSS (Sloan Digital Sky Survey). 
+Every observation is described by 17 feature columns and 1 class column which identifies it to be either a star, galaxy or quasar.
+
 
 ```{r}
 
@@ -46,11 +55,11 @@ dim(dataset)
 
 ```
 
-Let's look at the first 5 sample elements of the dataset
+Let's look at the first 6 sample elements of the dataset
 
 ```{r}
 
-dataset[1:5,]
+head(dataset)
 
 ```
 
@@ -62,7 +71,12 @@ pie(table(dataset$class))
 
 ```
 
+As shown in the pie chart above, the dataset contains 3 unbalanced classes, the first one the class of the galaxies with the 59% of the dataset, followed respectively by the class of the stars with 22% and the class of the quasar with 19% of the dataset.
+
 ### Dataset split
+
+We proceed to split the dataset, the 70% of the dataset is used for the training and the 30% for the testing.
+Note that the target column are separated from the two main set for further convenience.
 
 ```{r}
 
@@ -89,9 +103,11 @@ dim(dataset.test)
 
 ### Feature selection
 
+We proceed to compute the correlation between the dataset various columns in order to select the most relevant features for the prediction of the target class.
+
 ```{r}
 
-# Convert the dataclass target column to numeric
+# Convert the dataset target column to numeric
 dataset.train.target.numeric = as.numeric(factor(dataset.train.target))
 
 dataset.train$rerun_ID <- NULL
@@ -107,7 +123,11 @@ corrplot(correlation_matrix, method = 'color')
 
 ```
 
-Having computed the correlation between the dataset various column and its target, the unnecessary columns are removed
+As shown in the correlation matrix, the columns u, g, r, i and z, corresponding the various spectral components measured by the SDSS, are correlated with each other. The PCA will later be used to reduce the dimensionality and redundancy in the dataset. 
+Also deserving attention is the fact the multiple columns are identifiers for the specific observation contained in the row, those columns are dropped from the dataset.
+
+Having computed and analyzed the correlation between the dataset various column and its target, the unnecessary columns are removed.
+In order to keep the same number of columns in both the sets, the same columns are removed from the train set and the test set.
 
 ```{r}
 
@@ -142,6 +162,14 @@ dataset.test$class       <- NULL    # Target
 ```
 
 ### Data normalization
+
+The spectral components are highly correlated with each other, it therefore makes sense to normalize them with respect of each other.
+The same applies for the delta and alpha columns, which are the right ascension and declination angles, respectively.
+Lastly, the redshift column is normalized with respect of itself.
+Note that both the train and the test dataset have to be normalized, however the normalization is done only with respect of the train dataset in order to avoid data leakage.
+
+This normalization is done by scaling the values of each column between 0 and 1 and allows to achieve better results both on the PCA transform and the models built on top of it.
+
 ```{r}
 
 scale_train = function(dataframe) {
@@ -214,8 +242,9 @@ dataset.train$redshift = scale_train(dataset.train$redshift)
 
 ```
 
-
-The PCA is computed and we can see that four dimensions explain more than 90% of the variance.
+We compute the PCA transform to reduce the dimensionality of the dataset.
+The corresponding eigenvalues are plotted to understand how many components are needed to explain the variance of the dataset. Furthermore, the correlation matrix of the PCA transformed dataset is computed and plotted to understand the correlation between the components.
+Important to note that the PCA is being computed only on the train set in order to avoid data leakage.
 
 ```{r}
 
@@ -236,7 +265,11 @@ corrplot(pca.train.cor, method = 'color')
 
 ```
 
-Having achieved more than 80% explained variance with the first four dimensions we compute PCA again using only three dimensions and save the PCA variables
+As shown by the eigenvalues plot, the first three components explain more than 90% of the variance of the dataset, however, by analyzing the correlation matrix we can see that the fourth component is relatively highly correlated with the target class.
+Due to this correlation, the fourth component is kept in the PCA transform despite the fact that explaining less than 4% of the variance.
+
+Having achieved more than 95% of the variance with the first four components, we proced to apply the PCA transform over the train dataset.
+Because the PCA transform is computed only on the train set, we need to apply the same transform over the test set in order to have the same dimensionality.
 
 ```{r}
 
@@ -260,6 +293,10 @@ dataset.test$target <- factor(dataset.test.target)
 
 ## SVM
 
+The first of the two models chosen is a Support Vector Machine (SVM) with a radial kernel.
+The cost parameter is result of the grid search performed on the train set.
+It being a relatively hight value (10) the model might be prone to overfitting.
+
 ```{r}
 
 svm.radial = svm(
@@ -270,11 +307,13 @@ svm.radial = svm(
  cost        = 10
 )
 
-# svm.radial.tuned = tune.svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel=c('radial'), cost=c(0.1, 1,5,10), probability=TRUE)
+# svm.radial.tuned = tune.svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel=c('radial'), cost=c(0.1, 1, 5, 10), probability=FALSE)
 
 ```
 
 ### Generate predictions
+
+The test set is used to generate predictions and the confusion matrix is computed to evaluate the performance of the model.
 
 ```{r}
 
@@ -288,7 +327,7 @@ confusionMatrix(data = svm.pred, reference = factor(dataset.test.target))
 
 ## Tree
 
-A grid search is performed to identify the optimal complexity parameter value
+A grid search is performed to identify the optimal complexity parameter value.
 
 ```{r}
 
@@ -313,6 +352,8 @@ prp(tree, type=0, extra = 1)
 
 ### Generate predictions
 
+Again, the test set is used to generate predictions and the confusion matrix is computed to evaluate the performance of the model.
+
 ```{r}
 
 # Generate predictions
@@ -323,8 +364,9 @@ confusionMatrix(data = tree.pred, reference = factor(dataset.test.target))
 
 ```
 
-## Neural Network
 
 ## Metrics
+
+
 
 ## Results
