@@ -253,6 +253,33 @@ dataset.test.pca$target = factor(dataset.test.pca$target)
 
 ```
 
+## SVM
+
+```{r}
+
+svm.radial = svm(
+ target ~ .,
+ data        = dataset.train.pca,
+ kernel      = 'radial',
+ probability = FALSE,
+ cost        = 10
+)
+
+# svm.radial.tuned = tune.svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel=c('radial'), cost=c(0.1, 1,5,10), probability=TRUE)
+
+```
+
+### Generate predictions
+
+```{r}
+
+# Generate predictions
+svm.pred = predict(svm.radial, dataset.test.pca)
+
+# Create confusion matrix
+confusionMatrix(data = svm.pred, reference = factor(dataset.test.target))
+
+```
 
 ## Tree
 
