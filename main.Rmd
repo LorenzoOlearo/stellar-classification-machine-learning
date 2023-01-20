@@ -352,6 +352,29 @@ confusionMatrix(data = tree.pred, reference = factor(dataset.test.target))
 
 ```
 
+## Random Forest
+
+```{r}
+
+set.seed(108)
+
+forest.tune = tune.randomForest(target ~ ., data = dataset.train.pca, ntree = c(1:15)*10)
+forest = forest.tune$best.model
+
+plot(forest.tune)
+
+```
+
+### Generate predictions
+
+```{r}
+
+# Generate predictions
+forest.pred = predict(forest, dataset.test.pca)
+# Create confusion matrix
+confusionMatrix(data = forest.pred, reference = factor(dataset.test.target))
+
+```
 
 ## Metrics
 
