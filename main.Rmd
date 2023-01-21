@@ -24,6 +24,7 @@ if (!require("rpart")) install.packages("rpart"); library("rpart")
 if (!require("rpart.plot")) install.packages("rpart.plot"); library("rpart.plot")
 if (!require("caret")) install.packages("caret"); library("caret")
 if (!require("randomForest")) install.packages("randomForest"); library("randomForest")
+if (!require("tictoc")) install.packages("tictoc"); library("tictoc")
 
 ```
 
@@ -141,8 +142,6 @@ In order to keep the same number of columns in both the sets, the same columns a
 ```{r}
 
 dataset.train$obj_ID      <- NULL    # Object identifier
-# dataset.train$alpha       <- NULL    # Right ascension angle
-# dataset.train$delta       <- NULL    # Declination angle
 dataset.train$run_ID      <- NULL    # Run number used to identify the specific scan
 dataset.train$rerun_ID    <- NULL    # Rerun number that specify of the image was processed
 dataset.train$cam_col     <- NULL    # Camera column to identify the scanline
@@ -156,8 +155,6 @@ dataset.train$class       <- NULL    # Target
 
 # The same number of column is dropped from the test set in order to later apply the PCA transform computed on the train set
 dataset.test$obj_ID      <- NULL    # Object identifier
-# dataset.test$alpha       <- NULL    # Right ascension angle
-# dataset.test$delta       <- NULL    # Declination angle
 dataset.test$run_ID      <- NULL    # Run number used to identify the specific scan
 dataset.test$rerun_ID    <- NULL    # Rerun number that specify of the image was processed
 dataset.test$cam_col     <- NULL    # Camera column to identify the scanline
@@ -327,10 +324,14 @@ The test set is used to generate predictions and the confusion matrix is compute
 ```{r}
 
 # Generate predictions
+tic()
 svm.pred = predict(svm.radial, dataset.test.pca)
+svm.pred.time = toc()
+svm.pred.time = (svm.pred.time$toc - svm.pred.time$tic)*10e+9/dim(dataset.test.pca)[1]
 
 # Create confusion matrix
-confusionMatrix(data = svm.pred, reference = factor(dataset.test.target))
+svm.conf.mat = confusionMatrix(data = svm.pred, reference = factor(dataset.test.target))
+print(svm.conf.mat)
 
 ```
 
@@ -370,10 +371,14 @@ Again, the test set is used to generate predictions and the confusion matrix is 
 ```{r}
 
 # Generate predictions
+tic()
 tree.pred = predict(tree, dataset.test.pca, type="class")
+tree.pred.time = toc()
+tree.pred.time = (tree.pred.time$toc - tree.pred.time$tic)*10e+9/dim(dataset.test.pca)[1]
 
 # Create confusion matrix
-confusionMatrix(data = tree.pred, reference = factor(dataset.test.target))
+tree.conf.mat = confusionMatrix(data = tree.pred, reference = factor(dataset.test.target))
+print(tree.conf.mat)
 
 ```
 
@@ -402,9 +407,14 @@ The predictions on the test set are generated and the confusion matrix is comput
 ```{r}
 
 # Generate predictions
+tic()
 forest.pred = predict(forest, dataset.test.pca)
+forest.pred.time = toc()
+forest.pred.time = (forest.pred.time$toc - forest.pred.time$tic)*10e+9/dim(dataset.test.pca)[1]
+
 # Create confusion matrix
-confusionMatrix(data = forest.pred, reference = factor(dataset.test.target))
+forest.conf.mat = confusionMatrix(data = forest.pred, reference = factor(dataset.test.target))
+print(forest.conf.mat)
 
 ```
 
@@ -412,3 +422,23 @@ confusionMatrix(data = forest.pred, reference = factor(dataset.test.target))
 
 
 ## Results
+
+### Prediction time
+
+Here the Cohen's Kappa values are shown in relation with the average prediction time.
+
+```{r}
+
+pred.comparison = data.frame(
+  model = c("svm", "tree", "forest"), 
+  time = c(svm = svm.pred.time, tree = tree.pred.time, forest = forest.pred.time)/1000, 
+  kappa = c(svm = svm.conf.mat$overall["Kappa"], tree = tree.conf.mat$overall["Kappa"], forest = forest.conf.mat$overall["Kappa"])
+)
+print(pred.comparison)
+plot(pred.times, pred.kappa, ylim = c(0.85, 0.95), ylab = "kappa", xlab = "average prediction time [ns]")
+text(pred.times, pred.kappa-0.005, pred.comparison$model)
+
+```
+
+It is noticeable that while the SVM model produces a slightly better result than the random forest,
+the prediction time is much higher than the one of the other two models.
