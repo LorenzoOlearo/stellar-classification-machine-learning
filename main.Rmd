@@ -23,6 +23,7 @@ if (!require("corrplot")) install.packages("corrplot"); library("corrplot")
 if (!require("rpart")) install.packages("rpart"); library("rpart")
 if (!require("rpart.plot")) install.packages("rpart.plot"); library("rpart.plot")
 if (!require("caret")) install.packages("caret"); library("caret")
+if (!require("randomForest")) install.packages("randomForest"); library("randomForest")
 
 ```
 
@@ -59,12 +60,12 @@ pie(table(dataset$class))
 
 ```
 
-As shown in the pie chart above, the dataset contains 3 unbalanced classes, the first one the class of the galaxies with the 59% of the dataset, followed respectively by the class of the stars with 22% and the class of the quasar with 19% of the dataset.
+As shown in the pie chart above, the dataset contains 3 unbalanced classes, the first one is the class of the galaxies with the 59% of the dataset, followed respectively by the class of the stars with 22% and the class of the quasars with 19% of the dataset.
 
 ### Dataset split
 
-We proceed to split the dataset, the 70% of the dataset is used for the training and the 30% for the testing.
-Note that the target column are separated from the two main set for further convenience.
+We proceed to split the dataset, 70% of the dataset is used for the training and 30% for the testing.
+Note that the target columns are separated from the two main sets for further convenience.
 
 ```{r}
 
@@ -91,6 +92,26 @@ dim(dataset.test)
 
 ### Feature selection
 
+The dataset is composed of 18 columns, 17 of which are features and 1 is the target class, the feature columns are the following:
+
+1. obj_ID = Object Identifier, the unique value that identifies the object in the image catalog used by the CAS
+2. alpha = Right Ascension angle (at J2000 epoch)
+3. delta = Declination angle (at J2000 epoch)
+4. u = Ultraviolet filter in the photometric system
+5. g = Green filter in the photometric system
+6. r = Red filter in the photometric system
+7. i = Near Infrared filter in the photometric system
+8. z = Infrared filter in the photometric system
+9. run_ID = Run Number used to identify the specific scan
+10. rereun_ID = Rerun Number to specify how the image was processed
+11. cam_col = Camera column to identify the scanline within the run
+12. field_ID = Field number to identify each field
+13. spec_obj_ID = Unique ID used for optical spectroscopic objects (this means that 2 different observations with the same spec_obj_ID must share the output class)
+14. redshift = redshift value based on the increase in wavelength
+15. plate = plate ID, identifies each plate in SDSS
+16. MJD = Modified Julian Date, used to indicate when a given piece of SDSS data was taken
+17. fiber_ID = fiber ID that identifies the fiber that pointed the light at the focal plane in each observation
+
 We proceed to compute the correlation between the dataset various columns in order to select the most relevant features for the prediction of the target class.
 
 ```{r}
@@ -111,10 +132,10 @@ corrplot(correlation_matrix, method = 'color')
 
 ```
 
-As shown in the correlation matrix, the columns u, g, r, i and z, corresponding the various spectral components measured by the SDSS, are correlated with each other. The PCA will later be used to reduce the dimensionality and redundancy in the dataset. 
-Also deserving attention is the fact the multiple columns are identifiers for the specific observation contained in the row, those columns are dropped from the dataset.
+As shown in the correlation matrix, the columns u, g, r, i and z, corresponding to the various spectral components measured by the SDSS, are correlated with each other. The PCA will later be used to reduce the dimensionality and redundancy in the dataset. 
+Also deserving attention is the fact that multiple columns are identifiers for the specific observation contained in the row, those columns are dropped from the dataset.
 
-Having computed and analyzed the correlation between the dataset various column and its target, the unnecessary columns are removed.
+Having computed and analyzed the correlation between the dataset column and its target, the unnecessary columns are removed.
 In order to keep the same number of columns in both the sets, the same columns are removed from the train set and the test set.
 
 ```{r}
@@ -254,7 +275,7 @@ corrplot(pca.train.cor, method = 'color')
 ```
 
 As shown by the eigenvalues plot, the first three components explain more than 90% of the variance of the dataset, however, by analyzing the correlation matrix we can see that the fourth component is relatively highly correlated with the target class.
-Due to this correlation, the fourth component is kept in the PCA transform despite the fact that explaining less than 4% of the variance.
+Due to this correlation, the fourth component is kept in the PCA transform despite it explaining less than 4% of the variance.
 
 Having achieved more than 95% of the variance with the first four components, we proced to apply the PCA transform over the train dataset.
 Because the PCA transform is computed only on the train set, we need to apply the same transform over the test set in order to have the same dimensionality.
@@ -313,9 +334,11 @@ confusionMatrix(data = svm.pred, reference = factor(dataset.test.target))
 
 ```
 
-## Tree
+## Decision Tree
 
-A grid search is performed to identify the optimal complexity parameter value.
+The second model tested is a decision tree.
+The complexity parameter is select via grid search with cross validation.
+The best configuration is chosen based on the kappa statistic.
 
 ```{r}
 
@@ -338,6 +361,8 @@ prp(tree, type=0, extra = 1)
 
 ```
 
+The plot shows how the kappa statistic worsen as the complexity parameter increases.
+
 ### Generate predictions
 
 Again, the test set is used to generate predictions and the confusion matrix is computed to evaluate the performance of the model.
@@ -354,6 +379,9 @@ confusionMatrix(data = tree.pred, reference = factor(dataset.test.target))
 
 ## Random Forest
 
+Expanding on the idea of the decision tree, the random forest model is tested.
+The number of trees is optimized using a grid search.
+
 ```{r}
 
 set.seed(108)
@@ -365,7 +393,11 @@ plot(forest.tune)
 
 ```
 
+The plot shows how from 10 to 50 trees the error decreses remaining relatively stable after that.
+
 ### Generate predictions
+
+The predictions on the test set are generated and the confusion matrix is computed to evaluate the performance of the model.
 
 ```{r}
 
@@ -377,7 +409,6 @@ confusionMatrix(data = forest.pred, reference = factor(dataset.test.target))
 ```
 
 ## Metrics
-
 
 
 ## Results
