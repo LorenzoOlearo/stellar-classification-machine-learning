@@ -25,6 +25,8 @@ if (!require("rpart.plot")) install.packages("rpart.plot"); library("rpart.plot"
 if (!require("caret")) install.packages("caret"); library("caret")
 if (!require("randomForest")) install.packages("randomForest"); library("randomForest")
 if (!require("tictoc")) install.packages("tictoc"); library("tictoc")
+if (!require("ramify")) install.packages("ramify"); library("ramify")
+if (!require("multiROC")) install.packages("multiROC"); library("multiROC")
 
 ```
 
@@ -78,13 +80,20 @@ split.data = function(data, p = 0.7, s = 9000) {
   return(list(train=train, test=test)) 
 }
 
-dataset.target = dataset$class
+dataset.target = factor(dataset$class)
+dataset.target.prob = data.frame(
+  STAR = as.numeric(dataset.target == "STAR"),
+  GALAXY = as.numeric(dataset.target == "GALAXY"),
+  QSO = as.numeric(dataset.target == "QSO")
+)
 
 split = split.data(dataset)
 dataset.train = dataset[split$train, ]
 dataset.test = dataset[split$test, ]
 dataset.train.target = dataset.target[split$train]
 dataset.test.target = dataset.target[split$test]
+dataset.train.target.prob = dataset.target.prob[split$train,]
+dataset.test.target.prob = dataset.target.prob[split$test,]
 
 dim(dataset.train)
 dim(dataset.test)
@@ -309,7 +318,7 @@ svm.radial = svm(
  target ~ .,
  data        = dataset.train.pca,
  kernel      = 'radial',
- probability = FALSE,
+ probability = TRUE,
  cost        = 10
 )
 
@@ -323,14 +332,19 @@ The test set is used to generate predictions and the confusion matrix is compute
 
 ```{r}
 
+prob.to.factor = function(prob) {
+  return(factor(colnames(prob)[argmax(prob)]))
+}
+
 # Generate predictions
 tic()
-svm.pred = predict(svm.radial, dataset.test.pca)
+svm.pred = predict(svm.radial, dataset.test.pca, type="prob", probability = TRUE)
 svm.pred.time = toc()
 svm.pred.time = (svm.pred.time$toc - svm.pred.time$tic)*10e+9/dim(dataset.test.pca)[1]
+svm.pred = attr(svm.pred, "probabilities")
 
 # Create confusion matrix
-svm.conf.mat = confusionMatrix(data = svm.pred, reference = factor(dataset.test.target))
+svm.conf.mat = confusionMatrix(data = prob.to.factor(svm.pred), reference = dataset.test.target)
 print(svm.conf.mat)
 
 ```
@@ -372,12 +386,12 @@ Again, the test set is used to generate predictions and the confusion matrix is 
 
 # Generate predictions
 tic()
-tree.pred = predict(tree, dataset.test.pca, type="class")
+tree.pred = predict(tree, dataset.test.pca, type="prob", probability = TRUE)
 tree.pred.time = toc()
 tree.pred.time = (tree.pred.time$toc - tree.pred.time$tic)*10e+9/dim(dataset.test.pca)[1]
 
 # Create confusion matrix
-tree.conf.mat = confusionMatrix(data = tree.pred, reference = factor(dataset.test.target))
+tree.conf.mat = confusionMatrix(data = prob.to.factor(tree.pred), reference = dataset.test.target)
 print(tree.conf.mat)
 
 ```
@@ -408,12 +422,12 @@ The predictions on the test set are generated and the confusion matrix is comput
 
 # Generate predictions
 tic()
-forest.pred = predict(forest, dataset.test.pca)
+forest.pred = predict(forest, dataset.test.pca, type="prob")
 forest.pred.time = toc()
 forest.pred.time = (forest.pred.time$toc - forest.pred.time$tic)*10e+9/dim(dataset.test.pca)[1]
 
 # Create confusion matrix
-forest.conf.mat = confusionMatrix(data = forest.pred, reference = factor(dataset.test.target))
+forest.conf.mat = confusionMatrix(data = prob.to.factor(forest.pred), reference = dataset.test.target)
 print(forest.conf.mat)
 
 ```
@@ -422,6 +436,88 @@ print(forest.conf.mat)
 
 
 ## Results
+
+### ROC
+
+```{r}
+
+# roc.data = data.frame(
+#   STAR_true = dataset.test.target.prob$STAR,
+#   QSO_true = dataset.test.target.prob$QSO,
+#   GALAXY_true = dataset.test.target.prob$GALAXY,
+#   STAR_pred_SVM = svm.pred[,"STAR"],
+#   QSO_pred_SVM = svm.pred[,"QSO"],
+#   GALAXY_pred_SVM = svm.pred[,"GALAXY"],
+#   STAR_pred_TREE = tree.pred[,"STAR"],
+#   QSO_pred_TREE = tree.pred[,"QSO"],
+#   GALAXY_pred_TREE = tree.pred[,"GALAXY"],
+#   STAR_pred_FOREST = forest.pred[,"STAR"],
+#   QSO_pred_FOREST = forest.pred[,"QSO"],
+#   GALAXY_pred_FOREST = forest.pred[,"GALAXY"]
+# )
+
+roc.svm.data = data.frame(
+  STAR_true = dataset.test.target.prob$STAR,
+  QSO_true = dataset.test.target.prob$QSO,
+  GALAXY_true = dataset.test.target.prob$GALAXY,
+  STAR_pred_SVM = svm.pred[,"STAR"],
+  QSO_pred_SVM = svm.pred[,"QSO"],
+  GALAXY_pred_SVM = svm.pred[,"GALAXY"]
+)
+
+roc.tree.data = data.frame(
+  STAR_true = dataset.test.target.prob$STAR,
+  QSO_true = dataset.test.target.prob$QSO,
+  GALAXY_true = dataset.test.target.prob$GALAXY,
+  STAR_pred_TREE = tree.pred[,"STAR"],
+  QSO_pred_TREE = tree.pred[,"QSO"],
+  GALAXY_pred_TREE = tree.pred[,"GALAXY"]
+)
+
+roc.forest.data = data.frame(
+  STAR_true = dataset.test.target.prob$STAR,
+  QSO_true = dataset.test.target.prob$QSO,
+  GALAXY_true = dataset.test.target.prob$GALAXY,
+  STAR_pred_FOREST = forest.pred[,"STAR"],
+  QSO_pred_FOREST = forest.pred[,"QSO"],
+  GALAXY_pred_FOREST = forest.pred[,"GALAXY"]
+)
+
+roc.res = multi_roc(roc.data)
+roc.svm.res = multi_roc(roc.svm.data)
+roc.tree.res = multi_roc(roc.tree.data)
+roc.forest.res = multi_roc(roc.forest.data)
+
+roc.plot.data = plot_roc_data(roc.res)
+roc.svm.plot.data = plot_roc_data(roc.svm.res)
+roc.tree.plot.data = plot_roc_data(roc.tree.res)
+roc.forest.plot.data = plot_roc_data(roc.forest.res)
+
+multi_roc_plot = function(data, resample = 1) {
+  # multiROC plotting function
+  # Original source at https://github.com/WandeRum/multiROC
+  index = ((1:dim(data)[1]) %% resample) == 0
+  data = data[index,]
+  ggplot(data, aes(x = 1-Specificity, y=Sensitivity)) +
+    geom_path(aes(color = Group, linetype=Method)) +
+    geom_segment(aes(x = 0, y = 0, xend = 1, yend = 1), colour='grey', linetype = 'dotdash') +
+    theme_bw() + 
+    theme(
+      plot.title = element_text(hjust = 0.5), 
+      legend.justification=c(1, 0), legend.position=c(.95, .05),
+      legend.title=element_blank(), 
+      legend.background = element_rect(fill=NULL, linetype="solid", colour ="black")
+    )
+}
+
+#multi_roc_plot(roc.plot.data, 100)
+multi_roc_plot(roc.svm.plot.data, 100)
+multi_roc_plot(roc.tree.plot.data, 100)
+multi_roc_plot(roc.forest.plot.data, 100)
+
+
+```
+
 
 ### Prediction time
 
