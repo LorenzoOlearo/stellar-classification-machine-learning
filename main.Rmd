@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Machine Learning Project - Academic year 2022/2023
+
 Group members: Lorenzo Olearo, Alessandro Riva
 
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -31,14 +32,10 @@ if (!require("multiROC")) install.packages("multiROC"); library("multiROC")
 ```
 
 ## Dataset Analysis
-In astronomy, stellar classification is the classification of stars based on their spectral characteristics.
-The classification scheme of galaxies, quasars, and stars is one of the most fundamental in astronomy.
-The early cataloguing of stars and their distribution in the sky has led to the understanding that they make up our own galaxy and, following the distinction that Andromeda was a separate galaxy to our own, numerous galaxies began to be surveyed as more powerful telescopes were built.
-This dataset aims at the classification of stars, galaxies, and quasars based on their spectral characteristics.
 
-The data consists of 100,000 observations of space taken by the SDSS (Sloan Digital Sky Survey). 
-Every observation is described by 17 feature columns and 1 class column which identifies it to be either a star, galaxy or quasar.
+In astronomy, stellar classification is the classification of stars based on their spectral characteristics. The classification scheme of galaxies, quasars, and stars is one of the most fundamental in astronomy. The early cataloguing of stars and their distribution in the sky has led to the understanding that they make up our own galaxy and, following the distinction that Andromeda was a separate galaxy to our own, numerous galaxies began to be surveyed as more powerful telescopes were built. This dataset aims at the classification of stars, galaxies, and quasars based on their spectral characteristics.
 
+The data consists of 100,000 observations of space taken by the SDSS (Sloan Digital Sky Survey). Every observation is described by 17 feature columns and 1 class column which identifies it to be either a star, galaxy or quasar.
 
 ```{r}
 
@@ -67,8 +64,7 @@ As shown in the pie chart above, the dataset contains 3 unbalanced classes, the 
 
 ### Dataset split
 
-We proceed to split the dataset, 70% of the dataset is used for the training and 30% for the testing.
-Note that the target columns are separated from the two main sets for further convenience.
+We proceed to split the dataset, 70% of the dataset is used for the training and 30% for the testing. Note that the target columns are separated from the two main sets for further convenience.
 
 ```{r}
 
@@ -104,15 +100,15 @@ dim(dataset.test)
 
 The dataset is composed of 18 columns, 17 of which are features and 1 is the target class, the feature columns are the following:
 
-1. obj_ID = Object Identifier, the unique value that identifies the object in the image catalog used by the CAS
-2. alpha = Right Ascension angle (at J2000 epoch)
-3. delta = Declination angle (at J2000 epoch)
-4. u = Ultraviolet filter in the photometric system
-5. g = Green filter in the photometric system
-6. r = Red filter in the photometric system
-7. i = Near Infrared filter in the photometric system
-8. z = Infrared filter in the photometric system
-9. run_ID = Run Number used to identify the specific scan
+1.  obj_ID = Object Identifier, the unique value that identifies the object in the image catalog used by the CAS
+2.  alpha = Right Ascension angle (at J2000 epoch)
+3.  delta = Declination angle (at J2000 epoch)
+4.  u = Ultraviolet filter in the photometric system
+5.  g = Green filter in the photometric system
+6.  r = Red filter in the photometric system
+7.  i = Near Infrared filter in the photometric system
+8.  z = Infrared filter in the photometric system
+9.  run_ID = Run Number used to identify the specific scan
 10. rereun_ID = Rerun Number to specify how the image was processed
 11. cam_col = Camera column to identify the scanline within the run
 12. field_ID = Field number to identify each field
@@ -142,11 +138,9 @@ corrplot(correlation_matrix, method = 'color')
 
 ```
 
-As shown in the correlation matrix, the columns u, g, r, i and z, corresponding to the various spectral components measured by the SDSS, are correlated with each other. The PCA will later be used to reduce the dimensionality and redundancy in the dataset. 
-Also deserving attention is the fact that multiple columns are identifiers for the specific observation contained in the row, those columns are dropped from the dataset.
+As shown in the correlation matrix, the columns u, g, r, i and z, corresponding to the various spectral components measured by the SDSS, are correlated with each other. The PCA will later be used to reduce the dimensionality and redundancy in the dataset. Also deserving attention is the fact that multiple columns are identifiers for the specific observation contained in the row, those columns are dropped from the dataset.
 
-Having computed and analyzed the correlation between the dataset column and its target, the unnecessary columns are removed.
-In order to keep the same number of columns in both the sets, the same columns are removed from the train set and the test set.
+Having computed and analyzed the correlation between the dataset column and its target, the unnecessary columns are removed. In order to keep the same number of columns in both the sets, the same columns are removed from the train set and the test set.
 
 ```{r}
 
@@ -178,10 +172,7 @@ dataset.test$class       <- NULL    # Target
 
 ### Data normalization
 
-The spectral components are highly correlated with each other, it therefore makes sense to normalize them with respect of each other.
-The same applies for the delta and alpha columns, which are the right ascension and declination angles, respectively.
-Lastly, the redshift column is normalized with respect of itself.
-Note that both the train and the test dataset have to be normalized, however the normalization is done only with respect of the train dataset in order to avoid data leakage.
+The spectral components are highly correlated with each other, it therefore makes sense to normalize them with respect of each other. The same applies for the delta and alpha columns, which are the right ascension and declination angles, respectively. Lastly, the redshift column is normalized with respect of itself. Note that both the train and the test dataset have to be normalized, however the normalization is done only with respect of the train dataset in order to avoid data leakage.
 
 This normalization is done by scaling the values of each column between 0 and 1 and allows to achieve better results both on the PCA transform and the models built on top of it.
 
@@ -257,9 +248,7 @@ dataset.train$redshift = scale_train(dataset.train$redshift)
 
 ```
 
-We compute the PCA transform to reduce the dimensionality of the dataset.
-The corresponding eigenvalues are plotted to understand how many components are needed to explain the variance of the dataset. Furthermore, the correlation matrix of the PCA transformed dataset is computed and plotted to understand the correlation between the components.
-Important to note that the PCA is being computed only on the train set in order to avoid data leakage.
+We compute the PCA transform to reduce the dimensionality of the dataset. The corresponding eigenvalues are plotted to understand how many components are needed to explain the variance of the dataset. Furthermore, the correlation matrix of the PCA transformed dataset is computed and plotted to understand the correlation between the components. Important to note that the PCA is being computed only on the train set in order to avoid data leakage.
 
 ```{r}
 
@@ -280,11 +269,9 @@ corrplot(pca.train.cor, method = 'color')
 
 ```
 
-As shown by the eigenvalues plot, the first three components explain more than 90% of the variance of the dataset, however, by analyzing the correlation matrix we can see that the fourth component is relatively highly correlated with the target class.
-Due to this correlation, the fourth component is kept in the PCA transform despite it explaining less than 4% of the variance.
+As shown by the eigenvalues plot, the first three components explain more than 90% of the variance of the dataset, however, by analyzing the correlation matrix we can see that the fourth component is relatively highly correlated with the target class. Due to this correlation, the fourth component is kept in the PCA transform despite it explaining less than 4% of the variance.
 
-Having achieved more than 95% of the variance with the first four components, we proced to apply the PCA transform over the train dataset.
-Because the PCA transform is computed only on the train set, we need to apply the same transform over the test set in order to have the same dimensionality.
+Having achieved more than 95% of the variance with the first four components, we proced to apply the PCA transform over the train dataset. Because the PCA transform is computed only on the train set, we need to apply the same transform over the test set in order to have the same dimensionality.
 
 ```{r}
 
@@ -308,9 +295,7 @@ dataset.test$target <- factor(dataset.test.target)
 
 ## SVM
 
-The first of the two models chosen is a Support Vector Machine (SVM) with a radial kernel.
-The cost parameter is result of the grid search performed on the train set.
-It being a relatively hight value (10) the model might be prone to overfitting.
+The first of the two models chosen is a Support Vector Machine (SVM) with a radial kernel. The cost parameter is result of the grid search performed on the train set. It being a relatively hight value (10) the model might be prone to overfitting.
 
 ```{r}
 
@@ -351,9 +336,7 @@ print(svm.conf.mat)
 
 ## Decision Tree
 
-The second model tested is a decision tree.
-The complexity parameter is select via grid search with cross validation.
-The best configuration is chosen based on the kappa statistic.
+The second model tested is a decision tree. The complexity parameter is select via grid search with cross validation. The best configuration is chosen based on the kappa statistic.
 
 ```{r}
 
@@ -398,8 +381,7 @@ print(tree.conf.mat)
 
 ## Random Forest
 
-Expanding on the idea of the decision tree, the random forest model is tested.
-The number of trees is optimized using a grid search.
+Expanding on the idea of the decision tree, the random forest model is tested. The number of trees is optimized using a grid search.
 
 ```{r}
 
@@ -434,12 +416,35 @@ print(forest.conf.mat)
 
 ## Metrics
 
+The performances of the three models are evaluated using Cohen's Kappa, it being a better metric for a dataset with unbalanced classes.
+
+The Cohen's Kappa is defined as follows:
+
+$$
+\kappa ={\frac {p_0-p_e}{1-p_e}}
+$$
+
+where
+
+$$
+p_0=\frac{ \sum_a e_{a,a}} {\sum_i \sum_j e_{i,j}}
+$$
+
+which is the accuracy between all classes, and
+
+$$
+p_e = \frac{\sum_a\big[ (\sum_i e_{i,a})(\sum_j e_{a,j})\big]}{\sum_i \sum_j e_{i,j}} 
+$$
+
+with $e_{i,j}$ the elements of the confusion matrix.
+
+The kappa statistic has range [-1,+1] with 0 indicating a random classifier and 1 a perfect one, -1 indicates a totally wrong classification.
 
 ## Results
 
 ### ROC
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 
 # roc.data = data.frame(
 #   STAR_true = dataset.test.target.prob$STAR,
@@ -483,12 +488,12 @@ roc.forest.data = data.frame(
   GALAXY_pred_FOREST = forest.pred[,"GALAXY"]
 )
 
-roc.res = multi_roc(roc.data)
+# roc.res = multi_roc(roc.data)
 roc.svm.res = multi_roc(roc.svm.data)
 roc.tree.res = multi_roc(roc.tree.data)
 roc.forest.res = multi_roc(roc.forest.data)
 
-roc.plot.data = plot_roc_data(roc.res)
+# roc.plot.data = plot_roc_data(roc.res)
 roc.svm.plot.data = plot_roc_data(roc.svm.res)
 roc.tree.plot.data = plot_roc_data(roc.tree.res)
 roc.forest.plot.data = plot_roc_data(roc.forest.res)
@@ -518,7 +523,6 @@ multi_roc_plot(roc.forest.plot.data, 100)
 
 ```
 
-
 ### Prediction time
 
 Here the Cohen's Kappa values are shown in relation with the average prediction time.
@@ -531,10 +535,9 @@ pred.comparison = data.frame(
   kappa = c(svm = svm.conf.mat$overall["Kappa"], tree = tree.conf.mat$overall["Kappa"], forest = forest.conf.mat$overall["Kappa"])
 )
 print(pred.comparison)
-plot(pred.times, pred.kappa, ylim = c(0.85, 0.95), ylab = "kappa", xlab = "average prediction time [ns]")
-text(pred.times, pred.kappa-0.005, pred.comparison$model)
+plot(pred.comparison$time, pred.comparison$kappa, ylim = c(0.85, 0.95), ylab = "kappa", xlab = "average prediction time [ns]")
+text(pred.comparison$time, pred.comparison$kappa-0.005, pred.comparison$model)
 
 ```
 
-It is noticeable that while the SVM model produces a slightly better result than the random forest,
-the prediction time is much higher than the one of the other two models.
+It is noticeable that while the SVM model produces a slightly better result than the random forest, the prediction time is much higher than the one of the other two models.
