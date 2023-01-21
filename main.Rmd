@@ -510,7 +510,7 @@ multi_roc_plot(roc.forest.plot.data, 100)
 
 ```{r}
 
-plot_conf_mat = function(table) {
+plot_conf_mat = function(table, plot.title) {
   plt <- as.data.frame(table)
   
   plt$Prediction <- factor(plt$Prediction, levels=rev(levels(plt$Prediction)))
@@ -519,7 +519,7 @@ plot_conf_mat = function(table) {
   ggplot(plt, aes(Prediction,Reference, fill= Freq)) +
           geom_tile() + geom_text(aes(label=Freq)) +
           scale_fill_gradient(low="white", high="#85bdde") +
-          labs(x = "Reference",y = "Prediction") +
+          labs(x = "Reference", y = "Prediction", title = plot.title) +
           scale_x_discrete(labels=c("GALAXY","QSO","STAR")) +
           scale_y_discrete(labels=c("STAR","QSO","GALAXY"))
 }
@@ -539,9 +539,9 @@ forest.conf.mat.prob$table[, 1] = round(forest.conf.mat.prob$table[, 1] / sum(fo
 forest.conf.mat.prob$table[, 2] = round(forest.conf.mat.prob$table[, 2] / sum(forest.conf.mat.prob$table[, 2]) * 100, 2)
 forest.conf.mat.prob$table[, 3] = round(forest.conf.mat.prob$table[, 3] / sum(forest.conf.mat.prob$table[, 3]) * 100, 2)
 
-plot_conf_mat(svm.conf.mat.prob$table)
-plot_conf_mat(tree.conf.mat.prob$table)
-plot_conf_mat(forest.conf.mat.prob$table)
+plot_conf_mat(svm.conf.mat.prob$table, plot.title = "SVM confusion matrix")
+plot_conf_mat(tree.conf.mat.prob$table, plot.title = "Tree confusion matrix")
+plot_conf_mat(forest.conf.mat.prob$table, plot.title = "Forest confusion matrix")
 
 ```
 
