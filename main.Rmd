@@ -446,21 +446,6 @@ The kappa statistic has range [-1,+1] with 0 indicating a random classifier and 
 
 ```{r, message=FALSE, warning=FALSE}
 
-# roc.data = data.frame(
-#   STAR_true = dataset.test.target.prob$STAR,
-#   QSO_true = dataset.test.target.prob$QSO,
-#   GALAXY_true = dataset.test.target.prob$GALAXY,
-#   STAR_pred_SVM = svm.pred[,"STAR"],
-#   QSO_pred_SVM = svm.pred[,"QSO"],
-#   GALAXY_pred_SVM = svm.pred[,"GALAXY"],
-#   STAR_pred_TREE = tree.pred[,"STAR"],
-#   QSO_pred_TREE = tree.pred[,"QSO"],
-#   GALAXY_pred_TREE = tree.pred[,"GALAXY"],
-#   STAR_pred_FOREST = forest.pred[,"STAR"],
-#   QSO_pred_FOREST = forest.pred[,"QSO"],
-#   GALAXY_pred_FOREST = forest.pred[,"GALAXY"]
-# )
-
 roc.svm.data = data.frame(
   STAR_true = dataset.test.target.prob$STAR,
   QSO_true = dataset.test.target.prob$QSO,
@@ -488,12 +473,10 @@ roc.forest.data = data.frame(
   GALAXY_pred_FOREST = forest.pred[,"GALAXY"]
 )
 
-# roc.res = multi_roc(roc.data)
 roc.svm.res = multi_roc(roc.svm.data)
 roc.tree.res = multi_roc(roc.tree.data)
 roc.forest.res = multi_roc(roc.forest.data)
 
-# roc.plot.data = plot_roc_data(roc.res)
 roc.svm.plot.data = plot_roc_data(roc.svm.res)
 roc.tree.plot.data = plot_roc_data(roc.tree.res)
 roc.forest.plot.data = plot_roc_data(roc.forest.res)
@@ -515,11 +498,9 @@ multi_roc_plot = function(data, resample = 1) {
     )
 }
 
-#multi_roc_plot(roc.plot.data, 100)
 multi_roc_plot(roc.svm.plot.data, 100)
 multi_roc_plot(roc.tree.plot.data, 100)
 multi_roc_plot(roc.forest.plot.data, 100)
-
 
 ```
 
