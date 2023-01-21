@@ -258,7 +258,7 @@ pca.train <- PCA(dataset.train, scale.unit = FALSE, ncp = 8, graph = FALSE)
 eig <- get_eigenvalue(pca.train)
 print('Eigenvalues:')
 print(eig)
-fviz_eig(pca.train, addlabels = TRUE, ylim = c(0, 50))
+fviz_eig(pca.train, addlabels = TRUE)
 fviz_pca_var(pca.train, col.var = "black")
 
 # Compute the correlation matrix on the PCA transformed train dataset
@@ -549,25 +549,43 @@ plot_conf_mat(forest.conf.mat.prob$table)
 
 ```{r}
 
-# acc = data.frame(
-#   class  = rownames(svm.conf.mat$byClass),
-#   svm    = svm.conf.mat$byClass[, "Balanced Accuracy"],
-#   tree   = svm.conf.mat$byClass[, "Balanced Accuracy"],
-#   forest = svm.conf.mat$byClass[, "Balanced Accuracy"]
-# )
-# 
-# acc$class <- factor(acc$class, levels=rev(levels(plt$class)))
-#   
-# # ggplot original code from: https://stackoverflow.com/a/64539733  
-# ggplot(acc, aes(class, svm, fill = Freq)) +
-#         geom_tile() + geom_text(aes(label=Freq)) +
-#         scale_fill_gradient(low="white", high="#85bdde") +
-#         labs(x = "Reference",y = "Prediction") +
-#         scale_x_discrete(labels=c("GALAXY","QSO","STAR")) +
-#         scale_y_discrete(labels=c("STAR","QSO","GALAXY"))
-# 
-# 
+acc = data.frame(
+  class  = rownames(svm.conf.mat$byClass),
+  svm    = svm.conf.mat$byClass[, "Balanced Accuracy"],
+  tree   = svm.conf.mat$byClass[, "Balanced Accuracy"],
+  forest = svm.conf.mat$byClass[, "Balanced Accuracy"]
+)
 
+acc.svm = data.frame(
+  class = colnames(svm.conf.mat$table),
+  type = "svm",
+  accuracy = svm.conf.mat$byClass[, "Balanced Accuracy"]
+)
+
+acc.tree = data.frame(
+  class = colnames(tree.conf.mat$table),
+  type = "tree",
+  accuracy = tree.conf.mat$byClass[, "Balanced Accuracy"]
+)
+
+acc.forest = data.frame(
+  class = colnames(forest.conf.mat$table),
+  type = "forest",
+  accuracy = forest.conf.mat$byClass[, "Balanced Accuracy"]
+)
+
+acc = rbind(acc.svm, acc.tree, acc.forest)
+
+acc$balanced_accuracy <- round(acc$accuracy, 4)*100
+acc$class <- factor(acc$class)
+  
+# ggplot original code from: https://stackoverflow.com/a/64539733  
+ggplot(acc, aes(class, type, fill = balanced_accuracy)) +
+        geom_tile() + geom_text(aes(label=balanced_accuracy)) +
+        scale_fill_gradient(low="white", high="#85bdde") +
+        labs(x = "Model",y = "Class", title = "Balanced Accuracy") +
+        scale_x_discrete() +
+        scale_y_discrete()
 
 ```
 
