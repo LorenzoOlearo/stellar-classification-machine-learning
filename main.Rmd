@@ -178,73 +178,73 @@ This normalization is done by scaling the values of each column between 0 and 1 
 
 ```{r}
 
-scale_train = function(dataframe) {
-  return ((dataframe - min(dataframe)) / (max(dataframe) - min(dataframe)))
-}
-
-scale_test = function(dataframe, maxi, mini) {
-  return ((dataframe - mini) / (maxi - mini))
-}
-
-
-# The spectral components are normalized with respect of each other
-subdataset.test = data.frame(
-  u = dataset.test$u,
-  r = dataset.test$r,
-  i = dataset.test$i,
-  g = dataset.test$g,
-  z = dataset.test$z
-)
-
-subdataset.train = data.frame(
-  u = dataset.train$u,
-  r = dataset.train$r,
-  i = dataset.train$i,
-  g = dataset.train$g,
-  z = dataset.train$z
-)
-
-
-subdataset.test = scale_test(subdataset.test, max(subdataset.train), min(subdataset.train))
-subdataset.train = scale_train(subdataset.train)
-
-dataset.test$u = subdataset.test[, 1]
-dataset.test$r = subdataset.test[, 2]
-dataset.test$i = subdataset.test[, 3]
-dataset.test$g = subdataset.test[, 4]
-dataset.test$z = subdataset.test[, 5]
-
-dataset.train$u = subdataset.train[, 1]
-dataset.train$r = subdataset.train[, 2]
-dataset.train$i = subdataset.train[, 3]
-dataset.train$g = subdataset.train[, 4]
-dataset.train$z = subdataset.train[, 5]
-
-
-# The position components are normalized with respect of each other
-subdataset.test = data.frame(
-  alpha = dataset.test$alpha,
-  delta = dataset.test$delta
-)
-
-subdataset.train = data.frame(
-  alpha = dataset.train$alpha,
-  delta = dataset.train$delta
-)
-
-subdataset.test = scale_test(subdataset.test, max(subdataset.train), min(subdataset.train))
-subdataset.train = scale_train(subdataset.train)
-
-dataset.test$alpha = subdataset.test[, 1]
-dataset.test$delta = subdataset.test[, 2]
-
-dataset.train$alpha = subdataset.train[, 1]
-dataset.train$delta = subdataset.train[, 2]
-
-
-# redshift scaling
-dataset.test$redshift = scale_test(dataset.test$redshift, max(dataset.train$redshift), min(dataset.train$redshift))
-dataset.train$redshift = scale_train(dataset.train$redshift)
+# scale_train = function(dataframe) {
+#   return ((dataframe - min(dataframe)) / (max(dataframe) - min(dataframe)))
+# }
+# 
+# scale_test = function(dataframe, maxi, mini) {
+#   return ((dataframe - mini) / (maxi - mini))
+# }
+# 
+# 
+# # The spectral components are normalized with respect of each other
+# subdataset.test = data.frame(
+#   u = dataset.test$u,
+#   r = dataset.test$r,
+#   i = dataset.test$i,
+#   g = dataset.test$g,
+#   z = dataset.test$z
+# )
+# 
+# subdataset.train = data.frame(
+#   u = dataset.train$u,
+#   r = dataset.train$r,
+#   i = dataset.train$i,
+#   g = dataset.train$g,
+#   z = dataset.train$z
+# )
+# 
+# 
+# subdataset.test = scale_test(subdataset.test, max(subdataset.train), min(subdataset.train))
+# subdataset.train = scale_train(subdataset.train)
+# 
+# dataset.test$u = subdataset.test[, 1]
+# dataset.test$r = subdataset.test[, 2]
+# dataset.test$i = subdataset.test[, 3]
+# dataset.test$g = subdataset.test[, 4]
+# dataset.test$z = subdataset.test[, 5]
+# 
+# dataset.train$u = subdataset.train[, 1]
+# dataset.train$r = subdataset.train[, 2]
+# dataset.train$i = subdataset.train[, 3]
+# dataset.train$g = subdataset.train[, 4]
+# dataset.train$z = subdataset.train[, 5]
+# 
+# 
+# # The position components are normalized with respect of each other
+# subdataset.test = data.frame(
+#   alpha = dataset.test$alpha,
+#   delta = dataset.test$delta
+# )
+# 
+# subdataset.train = data.frame(
+#   alpha = dataset.train$alpha,
+#   delta = dataset.train$delta
+# )
+# 
+# subdataset.test = scale_test(subdataset.test, max(subdataset.train), min(subdataset.train))
+# subdataset.train = scale_train(subdataset.train)
+# 
+# dataset.test$alpha = subdataset.test[, 1]
+# dataset.test$delta = subdataset.test[, 2]
+# 
+# dataset.train$alpha = subdataset.train[, 1]
+# dataset.train$delta = subdataset.train[, 2]
+# 
+# 
+# # redshift scaling
+# dataset.test$redshift = scale_test(dataset.test$redshift, max(dataset.train$redshift), min(dataset.train$redshift))
+# dataset.train$redshift = scale_train(dataset.train$redshift)
 
 ```
 
@@ -252,7 +252,7 @@ We compute the PCA transform to reduce the dimensionality of the dataset. The co
 
 ```{r}
 
-pca.train <- PCA(dataset.train, scale.unit = FALSE, ncp = 8, graph = FALSE)
+pca.train <- PCA(dataset.train, scale.unit = TRUE, ncp = 8, graph = FALSE)
 
 # PCA Eigenvalues
 eig <- get_eigenvalue(pca.train)
@@ -275,7 +275,7 @@ Having achieved more than 95% of the variance with the first four components, we
 
 ```{r}
 
-pca.train = PCA(dataset.train, scale.unit = FALSE, ncp = 4, graph = FALSE)
+pca.train = PCA(dataset.train, scale.unit = TRUE, ncp = 4, graph = FALSE)
 pca.train.variables <- get_pca_var(pca.train)
 pca.train.ind <- get_pca_ind(pca.train)
 dim(pca.train.ind$coord)
