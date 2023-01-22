@@ -295,7 +295,7 @@ dataset.test$target <- factor(dataset.test.target)
 
 ## SVM
 
-The first of the two models chosen is a Support Vector Machine (SVM) with a radial kernel. The cost parameter is result of the grid search performed on the train set. It being a relatively hight value (10) the model might be prone to overfitting.
+The first of the two models chosen is a Support Vector Machine (SVM) with a radial kernel. The cost parameter is result of the grid search performed on the train set. It being a relatively high value (10) the model might be prone to overfitting.
 
 ```{r}
 
@@ -313,9 +313,8 @@ svm.radial = readRDS("models/svm.radial.rds")
 # svm.radial.tuned = tune.svm(
 #   target ~ .,
 #   data        = dataset.train.pca,
-#   kernel      = c('linear', 'polynomial', 'radial'),
+#   kernel      = 'radial',
 #   cost        = c(0.1, 1, 5, 10),
-#   degree      = c(1, 2, 3, 4),
 #   probability = TRUE
 # )
 # 
