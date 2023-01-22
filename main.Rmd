@@ -307,7 +307,15 @@ svm.radial = svm(
  cost        = 10
 )
 
-# svm.radial.tuned = tune.svm(target ~ Dim.1 + Dim.2 + Dim.3, data = dataset.train, kernel=c('radial'), cost=c(0.1, 1, 5, 10), probability=FALSE)
+# WARNING: takes a lot of time on this dataset (~3 hours on a intel i7 6700k)
+# svm.radial.tuned = tune.svm(
+#   target ~ Dim.1 + Dim.2 + Dim.3,
+#   data        = dataset.train,
+#   kernel      = c('linear', 'polynomial', 'radial'),
+#   cost        = c(0.1, 1, 5, 10),
+#   degree      = c(1, 2, 3, 4),
+#   probability = FALSE
+# )
 
 ```
 
@@ -504,6 +512,14 @@ multi_roc_plot(roc.svm.plot.data, 100)
 multi_roc_plot(roc.tree.plot.data, 100)
 multi_roc_plot(roc.forest.plot.data, 100)
 
+AUCs = data.frame(
+  SVM = unlist(roc.svm.res$AUC),
+  Tree = unlist(roc.tree.res$AUC),
+  Forest = unlist(roc.forest.res$AUC)
+)
+
+print(AUCs)
+
 ```
 
 ### Confusion matrices
@@ -597,11 +613,11 @@ Here the Cohen's Kappa values are shown in relation with the average prediction 
 
 pred.comparison = data.frame(
   model = c("svm", "tree", "forest"), 
-  time = c(svm = svm.pred.time, tree = tree.pred.time, forest = forest.pred.time)/1000, 
+  time = c(svm = svm.pred.time, tree = tree.pred.time, forest = forest.pred.time) / 1000, 
   kappa = c(svm = svm.conf.mat$overall["Kappa"], tree = tree.conf.mat$overall["Kappa"], forest = forest.conf.mat$overall["Kappa"])
 )
 print(pred.comparison)
-plot(pred.comparison$time, pred.comparison$kappa, ylim = c(0.85, 0.95), ylab = "kappa", xlab = "average prediction time [ns]")
+plot(pred.comparison$time, pred.comparison$kappa, ylim = c(0.85, 0.95), ylab = "kappa", xlab = "average prediction time [microseconds]")
 text(pred.comparison$time, pred.comparison$kappa-0.005, pred.comparison$model)
 
 ```
