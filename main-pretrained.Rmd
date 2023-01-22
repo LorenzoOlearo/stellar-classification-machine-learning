@@ -299,13 +299,15 @@ The first of the two models chosen is a Support Vector Machine (SVM) with a radi
 
 ```{r}
 
-svm.radial = svm(
- target ~ .,
- data        = dataset.train.pca,
- kernel      = 'radial',
- probability = TRUE,
- cost        = 10
-)
+svm.radial = readRDS("models/svm.radial.rds")
+
+# svm.radial = svm(
+#  target ~ .,
+#  data        = dataset.train.pca,
+#  kernel      = 'radial',
+#  probability = TRUE,
+#  cost        = 10
+# )
 
 # svm.radial.tuned = tune.svm(
 #   target ~ .,
@@ -351,22 +353,24 @@ The second model tested is a decision tree. The complexity parameter is select v
 
 ```{r}
 
+tree = readRDS("models/tree.rds")
+
 # Grid search over complexity parameter values for the best fitting tree
-tree.train.control = trainControl(method = "cv", number = 10)
-tree.train.grid = expand.grid(cp = (1:100)*0.001)
-tree.train = train(
-  target ~ .,
-  method    = "rpart",
-  data      = dataset.train.pca,
-  trControl = tree.train.control,
-  tuneGrid  = tree.train.grid,
-  metric    = "Kappa"
-) 
-
-tree = tree.train$finalModel
-
-plot(tree.train)
-prp(tree, type=0, extra = 1)
+# tree.train.control = trainControl(method = "cv", number = 10)
+# tree.train.grid = expand.grid(cp = (1:100)*0.001)
+# tree.train = train(
+#   target ~ .,
+#   method    = "rpart",
+#   data      = dataset.train.pca,
+#   trControl = tree.train.control,
+#   tuneGrid  = tree.train.grid,
+#   metric    = "Kappa"
+# ) 
+# 
+# tree = tree.train$finalModel
+# 
+# plot(tree.train)
+# prp(tree, type=0, extra = 1)
 
 ```
 
@@ -396,12 +400,14 @@ Expanding on the idea of the decision tree, the random forest model is tested. T
 
 ```{r}
 
-set.seed(108)
+forest = readRDS("models/forest.rds")
 
-forest.tune = tune.randomForest(target ~ ., data = dataset.train.pca, ntree = c(1:15)*10)
-forest = forest.tune$best.model
-
-plot(forest.tune)
+# set.seed(108)
+# 
+# forest.tune = tune.randomForest(target ~ ., data = dataset.train.pca, ntree = c(1:15)*10)
+# forest = forest.tune$best.model
+# 
+# plot(forest.tune)
 
 ```
 
