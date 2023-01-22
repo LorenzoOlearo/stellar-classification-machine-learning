@@ -33,7 +33,7 @@ if (!require("multiROC")) install.packages("multiROC"); library("multiROC")
 
 ## Dataset Analysis
 
-In astronomy, stellar classification is the classification of stars based on their spectral characteristics. The classification scheme of galaxies, quasars, and stars is one of the most fundamental in astronomy. The early cataloguing of stars and their distribution in the sky has led to the understanding that they make up our own galaxy and, following the distinction that Andromeda was a separate galaxy to our own, numerous galaxies began to be surveyed as more powerful telescopes were built. This dataset aims at the classification of stars, galaxies, and quasars based on their spectral characteristics.
+In astronomy, stellar classification is the classification of stars based on their spectral characteristics. The classification scheme of galaxies, quasars, and stars is one of the most fundamental in astronomy. The early cataloging of stars and their distribution in the sky has led to the understanding that they make up our own galaxy and, following the distinction that Andromeda was a separate galaxy to our own, numerous galaxies began to be surveyed as more powerful telescopes were built. This dataset aims at the classification of stars, galaxies, and quasars based on their spectral characteristics.
 
 The data consists of 100,000 observations of space taken by the SDSS (Sloan Digital Sky Survey). Every observation is described by 17 feature columns and 1 class column which identifies it to be either a star, galaxy or quasar.
 
@@ -109,7 +109,7 @@ The dataset is composed of 18 columns, 17 of which are features and 1 is the tar
 7.  i = Near Infrared filter in the photometric system
 8.  z = Infrared filter in the photometric system
 9.  run_ID = Run Number used to identify the specific scan
-10. rereun_ID = Rerun Number to specify how the image was processed
+10. rerun_ID = Rerun Number to specify how the image was processed
 11. cam_col = Camera column to identify the scanline within the run
 12. field_ID = Field number to identify each field
 13. spec_obj_ID = Unique ID used for optical spectroscopic objects (this means that 2 different observations with the same spec_obj_ID must share the output class)
@@ -271,7 +271,7 @@ corrplot(pca.train.cor, method = 'color')
 
 As shown by the eigenvalues plot, the first three components explain more than 90% of the variance of the dataset, however, by analyzing the correlation matrix we can see that the fourth component is relatively highly correlated with the target class. Due to this correlation, the fourth component is kept in the PCA transform despite it explaining less than 4% of the variance.
 
-Having achieved more than 95% of the variance with the first four components, we proced to apply the PCA transform over the train dataset. Because the PCA transform is computed only on the train set, we need to apply the same transform over the test set in order to have the same dimensionality.
+Having achieved more than 95% of the variance with the first four components, we proceed to apply the PCA transform over the train dataset. Because the PCA transform is computed only on the train set, we need to apply the same transform over the test set in order to have the same dimensionality.
 
 ```{r}
 
@@ -307,6 +307,7 @@ svm.radial = svm(
  cost        = 10
 )
 
+# WARNING: takes a lot of time on this dataset (~3 hours on a intel i7 6700k)
 # svm.radial.tuned = tune.svm(
 #   target ~ .,
 #   data        = dataset.train.pca,
@@ -405,7 +406,7 @@ plot(forest.tune)
 
 ```
 
-The plot shows how from 10 to 50 trees the error decreses remaining relatively stable after that.
+The plot shows how from 10 to 50 trees the error decreases remaining relatively stable after that.
 
 ### Generate predictions
 
@@ -525,6 +526,8 @@ print(AUCs)
 
 ```
 
+Overall, the best values of AUC is achieved by the forest classifier, with the SVM reaching values closer to 1 only in the classification of stars.
+
 ### Confusion matrices
 
 ```{r}
@@ -626,3 +629,7 @@ text(pred.comparison$time, pred.comparison$kappa-0.005, pred.comparison$model)
 ```
 
 It is noticeable that while the SVM model produces a slightly better result than the random forest, the prediction time is much higher than the one of the other two models.
+
+## Conclusions
+
+The results show that the SVM model performs the best out of the three tested models. Comparing it with the tree classifier its accuracy is significantly higher, however, in comparison with the random forest classifier the difference starts to become marginal (\~2%). Moreover, the inference time of the SVM is more than ten times higher of what the random forest achieves, thus making the random forest the more balanced, between accuracy and inference time, of all the three classifiers.
